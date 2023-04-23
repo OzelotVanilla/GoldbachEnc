@@ -11,7 +11,14 @@ def isPrime(n: int) -> bool: return is_prime(n)
 def isCoprime(a: int, b: int) -> bool: return are_relatively_prime(a, b)
 
 
-def genPrime(*, n_bit: int = 64) -> int: return getprime(n_bit)
+def genPrime(*, n_bit: int = 64, exclude: list[int] = None) -> int:
+    p = getprime(n_bit)
+
+    if exclude is not None:
+        while p in exclude:
+            p = genPrime(n_bit)
+
+    return p
 
 
 def getModInverse(of: int, under_mod: int, *,
@@ -49,7 +56,7 @@ def genKeys(*, a_bit: int = 16, b_bit: int = 16) -> tuple[int, int, int, int, in
         need_regenerate = False
 
     # Get enlarge factor `k`, this makes k harder to decode to `n`
-    k = n * reduce(mul, [genPrime(n_bit=16) for _ in range(4)])
+    k = n * reduce(mul, [genPrime(n_bit=16, exclude=[n]) for _ in range(4)])
 
     # Find the a^-1 and b^-1 according to n
     a_inv = getModInverse(a, n, get_random=True, enlarge_range_left=sqrt(k), enlarge_range_right=k)
