@@ -16,20 +16,27 @@ def genPrime(*, n_bit: int = 64, exclude: list[int] = None) -> int:
 
     if exclude is not None:
         while p in exclude:
-            p = genPrime(n_bit)
+            p = getprime(n_bit)
 
     return p
 
 
 def getModInverse(of: int, under_mod: int, *,
                   get_random: bool = False,
+                  bigger_than: int = None,
                   enlarge_range_left: int = -99,
                   enlarge_range_right: int = 99):
+    result = pow(of, -1, under_mod)
+
     if get_random:
-        return pow(of, -1, under_mod) + \
-            Random().randint(int(enlarge_range_left), int(enlarge_range_right)) * under_mod
-    else:
-        return pow(of, -1, under_mod)
+        # Bigger Than Mode
+        if bigger_than is not None:
+            while result <= bigger_than:
+                result += Random().randint(under_mod, under_mod**4) * under_mod
+        else:
+            result += Random().randint(int(enlarge_range_left), int(enlarge_range_right)) * under_mod
+
+    return result
 
 
 def genKeys(*, a_bit: int = 16, b_bit: int = 16) -> tuple[int, int, int, int, int, int, int]:
@@ -38,8 +45,7 @@ def genKeys(*, a_bit: int = 16, b_bit: int = 16) -> tuple[int, int, int, int, in
     """
     a, b, n = 0, 0, 0
     a_inv, b_inv = 0, 0
-    need_regenerate = True
-    while need_regenerate:
+    while True:
         # Generate a, b, n
         a, b = genPrime(n_bit=a_bit), genPrime(n_bit=b_bit)
         n = a + b  # Goldbach here!
@@ -47,24 +53,14 @@ def genKeys(*, a_bit: int = 16, b_bit: int = 16) -> tuple[int, int, int, int, in
         if n_a_b_not_coprime:
             continue
 
-        # Generate x, which will be exchange secretly
-        x = Random().randint(-2**16, 2**16)
-        n_x_not_coprime = not isCoprime(n, x)
-        if n_x_not_coprime:
-            continue
-
-        need_regenerate = False
+        break
 
     # Get enlarge factor `k`, this makes k harder to decode to `n`
     k = n * reduce(mul, [genPrime(n_bit=16, exclude=[n]) for _ in range(4)])
 
     # Find the a^-1 and b^-1 according to n
-    a_inv = getModInverse(a, n, get_random=True, enlarge_range_left=sqrt(k), enlarge_range_right=k)
-    b_inv = getModInverse(b, n, get_random=True, enlarge_range_left=sqrt(k), enlarge_range_right=k)
+    a_inv = getModInverse(a, n, get_random=True, bigger_than=k)
+    b_inv = getModInverse(b, n, get_random=True, bigger_than=k)
     # Make them big enough, so they can perform "mod k",
     #  and let the encrypted message not able to be calc (if m * a_inv < k, it is obvious to steal)
-    return a, b, n, a_inv, b_inv, x, k
-
-
-if __name__ == "__main__":
-    print(genKeys())
+    return a, b, n, a_inv, b_inv, k

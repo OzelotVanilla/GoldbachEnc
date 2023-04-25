@@ -50,13 +50,14 @@ class User:
         self.key_of_others: dict[str, PublicKey] = dict()
 
     def generateKey(self, *, key_name: str = None):
-        a, b, n, a_inv, b_inv, _, k = genKeys()
+        a, b, n, a_inv, b_inv, k = genKeys()
 
         # Give a random safe bit length
         n_bit_length = n.bit_length()
-        less_than_n_bit = 0
-        while less_than_n_bit < 3:
-            less_than_n_bit = n_bit_length / Random().randint(1, n_bit_length)
+        # More than 10 bit will be safe ?
+        # Also make sure that this length message, times `a_inv` or `b_inv`, will bigger than `k`
+        # Maybe it can be reached by having a big `a_inv` and `b_inv` which is bigger than `k` ?
+        less_than_n_bit = Random().randint(10, n_bit_length - 1)
 
         if key_name is not None:
             self.key_name_map[key_name] = k
