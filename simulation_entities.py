@@ -1,5 +1,4 @@
 from random import Random
-from mathfunc import genKeys
 from cryptfunc import *
 
 

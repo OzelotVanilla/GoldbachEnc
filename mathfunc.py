@@ -2,7 +2,6 @@ from rsa.prime import getprime, are_relatively_prime, is_prime
 from random import Random
 from functools import reduce
 from operator import mul
-from math import sqrt
 
 
 def isPrime(n: int) -> bool: return is_prime(n)
