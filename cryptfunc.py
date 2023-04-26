@@ -1,5 +1,5 @@
 from str_manip import BitExtracter, StringBuffer, StringMakerFromBytes
-from mathfunc import genKeys
+from mathfunc import genKeys, getSafeRandomInt
 
 from collections import deque
 from random import Random
@@ -35,7 +35,7 @@ def generateKeyGoldbach():
     # More than 10 bit will be safe ?
     # Also make sure that this length message, times `a_inv` or `b_inv`, will bigger than `k`
     # Maybe it can be reached by having a big `a_inv` and `b_inv` which is bigger than `k` ?
-    less_than_n_bit = Random().randint(10, n_bit_length - 1)
+    less_than_n_bit = getSafeRandomInt(10, n_bit_length - 1)
 
     return GoldbachKey(PublicKey(a_inv, b_inv, k, less_than_n_bit), PrivateKey(a, b))
 
@@ -122,7 +122,7 @@ def decryptGoldbach(message: deque[int], private_key: PrivateKey) -> str:
 
         # Every eight bit will be a byte (for string)
         while len(bits_buffer) >= 8:
-            one_byte = BitExtracter.bitsToByte([bits_buffer.popleft() for _ in range(8)])
+            one_byte = BitExtracter.bitsToNumber([bits_buffer.popleft() for _ in range(8)])
             extracter.appendInt(one_byte)
 
         # Try to decode and extract

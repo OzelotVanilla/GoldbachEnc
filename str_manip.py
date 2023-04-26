@@ -10,7 +10,7 @@ import os
 
 class BitExtracter:
     def __init__(self, of: object) -> None:
-        self.__origin = of
+        self.__origin = str(of)
         self.__position_by_codepoint = 0
         self.__position_in_bit = 0
         self.__getNBit_buffer_of_remain: deque[int] = deque()
@@ -98,19 +98,10 @@ class BitExtracter:
         arr_length = len(of_bits_arr)
 
         for i in range(arr_length):
-            if of_bits_arr[i] == 1:
+            if of_bits_arr[i] > 0:
                 result += 1 << (arr_length - 1 - i)
 
         return result
-
-    def bitsToByte(eight_bit_arr: list[int]) -> int:
-        one_byte = 0
-        for i in range(8):
-            b = eight_bit_arr[i]
-            if b > 0:
-                one_byte += 1 << (7 - i)
-
-        return one_byte
 
     def isExhausted(self) -> bool:
         return self.__origin_str_exhausted

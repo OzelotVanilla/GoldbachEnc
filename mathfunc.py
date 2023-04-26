@@ -1,7 +1,7 @@
 from rsa.prime import getprime, are_relatively_prime, is_prime
-from random import Random
 from functools import reduce
-from operator import mul
+from operator import mul, or_
+from secrets import randbelow
 
 
 def isPrime(n: int) -> bool: return is_prime(n)
@@ -10,12 +10,24 @@ def isPrime(n: int) -> bool: return is_prime(n)
 def isCoprime(a: int, b: int) -> bool: return are_relatively_prime(a, b)
 
 
-def genPrime(*, n_bit: int = 64, exclude: list[int] = None) -> int:
+def isNotCoprime(a: int, b: int) -> bool: return not are_relatively_prime(a, b)
+
+
+def genPrime(*, n_bit: int = 64, exclude: list[int] = None, coprime_with: list[int] = None) -> int:
     p = getprime(n_bit)
 
-    if exclude is not None:
-        while p in exclude:
-            p = getprime(n_bit)
+    if exclude is not None or coprime_with is not None:
+        # We should do special check before return
+        # Both option on
+        if exclude is not None and coprime_with is not None:
+            while p in exclude or reduce(or_, [isNotCoprime(p, x) for x in coprime_with]):
+                p = getprime(n_bit)
+        elif exclude is not None:
+            while p in exclude:
+                p = getprime()
+        else:  # coprime_with option is on
+            while reduce(or_, [isNotCoprime(p, x) for x in coprime_with]):
+                p = getprime(n_bit)
 
     return p
 
@@ -31,9 +43,9 @@ def getModInverse(of: int, under_mod: int, *,
         # Bigger Than Mode
         if bigger_than is not None:
             while result <= bigger_than:
-                result += Random().randint(under_mod, under_mod**4) * under_mod
+                result += getSafeRandomInt(under_mod, under_mod**4) * under_mod
         else:
-            result += Random().randint(int(enlarge_range_left), int(enlarge_range_right)) * under_mod
+            result += getSafeRandomInt(int(enlarge_range_left), int(enlarge_range_right)) * under_mod
 
     return result
 
@@ -55,7 +67,7 @@ def genKeys(*, a_bit: int = 16, b_bit: int = 16) -> tuple[int, int, int, int, in
         break
 
     # Get enlarge factor `k`, this makes k harder to decode to `n`
-    k = n * reduce(mul, [genPrime(n_bit=16, exclude=[n]) for _ in range(4)])
+    k = n * reduce(mul, [genPrime(n_bit=16, coprime_with=[n]) for _ in range(4)])
 
     # Find the a^-1 and b^-1 according to n
     a_inv = getModInverse(a, n, get_random=True, bigger_than=k)
@@ -63,3 +75,11 @@ def genKeys(*, a_bit: int = 16, b_bit: int = 16) -> tuple[int, int, int, int, in
     # Make them big enough, so they can perform "mod k",
     #  and let the encrypted message not able to be calc (if m * a_inv < k, it is obvious to steal)
     return a, b, n, a_inv, b_inv, k
+
+
+def getSafeRandomInt(start: int = 0, until: int = 100) -> int:
+    """
+    Both side inclusive. `until` must be greater than `start`.
+    """
+
+    return randbelow(1 + until - start) + start
