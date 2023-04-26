@@ -1,6 +1,43 @@
+from str_manip import BitExtracter, StringBuffer, StringMakerFromBytes
+from mathfunc import genKeys
+
+from collections import deque
 from random import Random
-from functools import reduce
-from operator import mul
+
+
+class PublicKey:
+    def __init__(self, a_inv: int, b_inv: int, k: int, less_than_n_bit: int) -> None:
+        self.a_inv = a_inv
+        self.b_inv = b_inv
+        self.k = k
+        # This is used for stronger encrypt, tell the sender make chunk less than this bit.
+        self.less_than_n_bit = less_than_n_bit
+
+
+class PrivateKey:
+    def __init__(self, a: int, b: int) -> None:
+        self.a = a
+        self.b = b
+        self.n = a + b
+
+
+class GoldbachKey:
+    def __init__(self, public_key: PublicKey, private_key: PrivateKey) -> None:
+        self.public_key = public_key
+        self.private_key = private_key
+
+
+def generateKeyGoldbach():
+    a, b, n, a_inv, b_inv, k = genKeys()
+
+    # Give a random safe bit length
+    n_bit_length = n.bit_length()
+    # More than 10 bit will be safe ?
+    # Also make sure that this length message, times `a_inv` or `b_inv`, will bigger than `k`
+    # Maybe it can be reached by having a big `a_inv` and `b_inv` which is bigger than `k` ?
+    less_than_n_bit = Random().randint(10, n_bit_length - 1)
+
+    return GoldbachKey(PublicKey(a_inv, b_inv, k, less_than_n_bit), PrivateKey(a, b))
 
 
 def encryptGoldbachSimple(message: str, a_inv: int, b_inv: int, k: int) -> tuple[list[int], int]:
@@ -23,16 +60,75 @@ def decryptGoldbachSimple(message: list[int], a: int, b: int, n: int) -> str:
     return "".join(map(lambda x: chr(int(x)), result))
 
 
-# TODO This should make a stronger encypt method
-def encryptGoldbach(message: str, a_inv: int, b_inv: int, k: int) -> list[int]:
-    message_bytes = message.encode()
-    print(message_bytes)
+def encryptGoldbach(message: str, public_key: PublicKey, *, encoding: str = "utf-8") -> deque[int]:
+    # Use block cipher method to encode, block size is `less_than_n_bit`.
+    extracter = BitExtracter(message)
+    encrypt_result = deque(maxlen=extracter.getApproxSizeInBit() / less_than_n_bit + 10)
+    i = 0
+    a_inv = public_key.a_inv
+    b_inv = public_key.b_inv
+    k = public_key.k
+    less_than_n_bit = public_key.less_than_n_bit
+
+    # While the string is not exhausted, can extract normally
+    while extracter.isNotExhausted():
+        bits_extracted = extracter.getNBit(less_than_n_bit)
+        number_from_bits = BitExtracter.bitsToNumber(bits_extracted)
+        number_multiplied = number_from_bits * (a_inv if i % 2 == 0 else b_inv)
+
+        # Checkpoint: If failed, it implies the a_inv or b_inv is still too small
+        if number_multiplied < k:
+            raise ArithmeticError(
+                f"{'a_inv' if i % 2 == 0 else 'b_inv'} is too small ({(a_inv if i % 2 == 0 else b_inv)})! "
+                + f"Should be greater than k ({k})."
+            )
+
+        encrypt_result.append(number_multiplied % k)
+        i += 1
+
+    # At now, either string exhausted (need add trailing zero), or end normally
+    # Leave this question to decrypt, first send it through network
+    return encrypt_result
 
 
-# TODO
-def decryptGoldbach(message: list[int], a, b, n, x) -> str:
-    pass
+def decryptGoldbach(message: deque[int], private_key: PrivateKey) -> str:
+    a = private_key.a
+    b = private_key.b
+    n = private_key.n
+    i = 0
 
+    extracter = StringMakerFromBytes()
 
-if __name__ == "__main__":
-    encryptGoldbach("Test", 1, 1, 1)
+    # In order to avoid the resize of the deque.
+    guess_bit_length_element = message[0].bit_length() + 5
+    bits_buffer = deque(maxlen=guess_bit_length_element)
+
+    # Guess the byte size of string and init the StringBuffer,
+    #  give some compensate to the guess length
+    guess_byte_num = (len(message) + 10) * guess_bit_length_element / 8
+    decrypt_result = StringBuffer(allocate_n_byte=int(guess_byte_num))
+    del guess_bit_length_element, guess_byte_num
+
+    # Change the int to bytes, then convert to string and store it
+    while len(message) > 0:
+        x = message.popleft()
+
+        # Decrypt the message
+        x = x % n * (a if i % 2 == 0 else b) % n
+
+        x_bits = BitExtracter.objToBits(x)
+        for bit in x_bits:
+            bits_buffer.append(bit)
+
+        # Every eight bit will be a byte (for string)
+        while len(bits_buffer) >= 8:
+            one_byte = BitExtracter.bitsToByte([bits_buffer.popleft() for _ in range(8)])
+            extracter.appendInt(one_byte)
+
+        # Try to decode and extract
+        extracter.decode()
+        decrypt_result.write(extracter.extract())
+
+        i += 1
+
+    return decrypt_result.getvalue()
