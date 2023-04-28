@@ -73,7 +73,7 @@ Now the public and private key generation is finished:
 
 Their relationship is:
 
-* $a+b=n$.
+* $a + b = n$, while $n$ is an even number.
 * $a$ and $n$ coprime.
 * $b$ and $n$ coprime.
 * $k$ is $n$ multiply by several prime (which is not comprime with $n$).
@@ -87,20 +87,22 @@ Assume that the internal minimal unit of the string will be `byte`.
 
 Each time, extract `less_than_n_bit` number of bits from string,
 let these bits considered as a number $m$.
-Use $c = m \cdot a^{-1} \; \% \; k$ as the encrypted text.
+Use $c = m \cdot a^{-1} \; \mathrm{mod} \; k$ as the encrypted text.
 
 When the string is *exhausted* (you cannot extract exact number of bits,
 since there is not enough bits in the string), encrypt it, send, and stop.
 
 > #### What need to be done to solve leading zeros in bit representation ?
 >
-> Add always a leading one before all the bits, and remove that one.
+> Add always a leading one before all the bits (add to `m`),
+> and remove that one when decrypting.
 
 
 ### Decryption
 
 From the encrypted message, each time, pop a number from head, let it be $c$.
-Then, the decrypt approach is $m = c \% n \cdot a \% k$
+Then, the decrypt approach is
+$m = (c \;  \mathrm{mod} \; n) \cdot a \; \mathrm{mod} \; k$
 to calculate the original text.
 
 > Do not forget the algorithm once add one leading one.
@@ -110,7 +112,7 @@ Specialty and Strength
 ----
 
 This algorithm use **multiplication** instead of **power function** (e.g. in *RSA*),
-so the data is not enlarged too much.
+so the data is not enlarged too much, and the computation could be done faster.
 
 Since the big number is considered hard to decompose into prime factors,
 the public key can be considered safe.
