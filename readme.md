@@ -66,7 +66,7 @@ Their relationship is:
 * $a+b=n$.
 * $a$ and $n$ coprime.
 * $b$ and $n$ coprime.
-* $k$ is $n$ multiply by several prime (which is not $n$).
+* $k$ is $n$ multiply by several prime (which is not comprime with $n$).
 * $a^{-1} > k$ and $b^{-1} > k$.
 
 ### Encryption
@@ -82,9 +82,9 @@ Use $c = m \cdot a^{-1} \; \% \; k$ as the encrypted text.
 When the string is *exhausted* (you cannot extract exact number of bits,
 since there is not enough bits in the string), encrypt it, send, and stop.
 
-> #### Why we do not add zeros ?
+> #### What need to be done to solve leading zeros in bit representation ?
 >
-> Since the string will be built afterward byte by byte.
+> Add always a leading one before all the bits, and remove that one.
 
 
 ### Decryption
