@@ -90,9 +90,10 @@ def encryptGoldbach(message: str, public_key: PublicKey, *, encoding: str = "utf
 
     # While the string is not exhausted, can extract normally
     while extracter.isNotExhausted():
-        bits_extracted = extracter.getNBit(less_than_n_bit)
+        # Since we add one more bit before the extract bit, so need to minus 1
+        bits_extracted = extracter.getNBit(less_than_n_bit - 1, encoding=encoding)
 
-        # If get a em
+        # If get a empty string
         if len(bits_extracted) == 0:
             break
 
@@ -115,13 +116,13 @@ def encryptGoldbach(message: str, public_key: PublicKey, *, encoding: str = "utf
     return encrypt_result
 
 
-def decryptGoldbach(message: deque[int], private_key: PrivateKey) -> str:
+def decryptGoldbach(message: deque[int], private_key: PrivateKey, *, encoding: str = "utf-8") -> str:
     a = private_key.a
     b = private_key.b
     n = private_key.n
     i = 0
 
-    extracter = StringMakerFromBytes()
+    extracter = StringMakerFromBytes(encoding=encoding)
 
     # In order to avoid the resize of the deque.
     guess_bit_length_element = message[0].bit_length() + 5

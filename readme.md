@@ -22,6 +22,16 @@ Structure
 
 `str_manip.py`: Contains tool to manipulate the string.
 
+How to Run
+----
+
+1. Download the file in this project, all into a folder.
+2. Run file `main.py`. If using terminal, use `python ./main.py`.
+
+> Notice: If you get some error like `python` is not recognized,
+> please search online to solve this problem
+> (like, install some tools such as "python is python3").
+
 Mechanism of Encryption/Decryption
 ----
 
@@ -93,6 +103,8 @@ From the encrypted message, each time, pop a number from head, let it be $c$.
 Then, the decrypt approach is $m = c \% n \cdot a \% k$
 to calculate the original text.
 
+> Do not forget the algorithm once add one leading one.
+> This leading one is removed after $m$ is calculated.
 
 Specialty and Strength
 ----
@@ -107,3 +119,19 @@ they must also try the correct combination to get $n$
 (since $n$ is an even number, and has possibility to be decomposed into different numbers).
 If the prime multiplied with $k$ is ranged from small to big number,
 it will make it even harder to get $n$.
+
+Omake
+----
+
+Have you seen the `main.py`,
+and see the name *Featherine Augustus Aurora* and *Beatrice Castiglioni* ?
+Are you interested in who are they ?
+
+They are the characters from a game
+[*Umineko When They Cry*](https://en.wikipedia.org/wiki/Umineko_When_They_Cry)
+(うみねこの<span style="color: red">な</span>く頃に).
+This is a game about the magic, detective, illusion,
+and the mystery story created by the witch of the gold.
+If you have time, you can dive into this game, I hope you can find it fun!
+
+Happy coding, happy gaming, hope you have a nice day.

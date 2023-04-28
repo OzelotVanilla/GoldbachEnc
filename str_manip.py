@@ -16,7 +16,7 @@ class BitExtracter:
         self.__getNBit_buffer_of_remain: deque[int] = deque()
         self.__origin_str_exhausted = False
 
-    def getNBit(self, n_bit: int) -> list[int]:
+    def getNBit(self, n_bit: int, *, encoding: str = "utf-8") -> list[int]:
         """
         Extract n bits from the string, and return to you.
 
@@ -29,49 +29,51 @@ class BitExtracter:
 
         n_bit_to_extract = n_bit
         result = [0] * n_bit_to_extract
-        result_position = 0
+        result_write_position = 0
 
         # If there is remained bits in the buffer, use them
-        len_remaining = len(self.__getNBit_buffer_of_remain)
-        if len_remaining > 0:
-            can_append_n_bit = min(n_bit_to_extract, len_remaining)
-            while result_position < can_append_n_bit:
-                result[result_position] = self.__getNBit_buffer_of_remain.popleft()
-                result_position += 1
+        len_remaining_bits = len(self.__getNBit_buffer_of_remain)
+        if len_remaining_bits > 0:
+            can_append_n_bit = min(n_bit_to_extract, len_remaining_bits)
+            while result_write_position < can_append_n_bit:
+                result[result_write_position] = self.__getNBit_buffer_of_remain.popleft()
+                result_write_position += 1
 
             n_bit_to_extract -= can_append_n_bit
 
         # Extract new bytes from string if still need to append
         if n_bit_to_extract > 0:
             guess_num_of_char_extract = math.ceil(n_bit_to_extract / 8)
-            extracted_byte = self.__getNCharFromOrigin(guess_num_of_char_extract).encode()
+            extracted_byte = self.__getNCharFromOrigin(guess_num_of_char_extract).encode(encoding)
 
             # If the extracter is already exhausted here, it will get empty string
             if len(extracted_byte) == 0:
+                self.__origin_str_exhausted = True
                 return []
 
             # Concat lists of bits
             bits_array = reduce(add, [BitExtracter.objToBits(c, in_byte_width=True) for c in extracted_byte])
             bits_array_len = len(bits_array)
 
-            # Checkpoint: `bits_array` must be longer than `n_bit`
+            # Checkpoint: `bits_array` must be longer than `n_bit_to_extract`
             # If not enough length, means you have exhausted the string
-            # Important: It will be filled with extra 0 at the end,
-            #  since the result is filled with all 0 at the first.
             if bits_array_len < n_bit_to_extract:
                 # raise BufferError(f"Requiring {n_bit} bits, but got {bits_array_len} len buffer with {bits_array}.")
                 self.__origin_str_exhausted = True
                 n_bit_to_extract = bits_array_len
 
             # Extract the number that is needed
-            bits_array_position = 0
-            while bits_array_position < n_bit_to_extract:
-                result[result_position] = bits_array[bits_array_position]
-                bits_array_position += 1
-                result_position += 1
+            bits_array_read_position = 0
+            while bits_array_read_position < n_bit_to_extract:
+                result[result_write_position] = bits_array[bits_array_read_position]
+                bits_array_read_position += 1
+                result_write_position += 1
+
+            # Eliminate zeros that is not belongs to the result (since result array is filled with 0 when init)
+            result = result[0:result_write_position]
 
             # Push the remained elements to the buffer, if any
-            for i in range(bits_array_position, bits_array_len):
+            for i in range(bits_array_read_position, bits_array_len):
                 self.__getNBit_buffer_of_remain.append(bits_array[i])
 
         self.__position_in_bit += len(result)
@@ -230,6 +232,11 @@ class StringMakerFromBytes:
         """
         Try to decode possible combination.
         """
+        match self.encoding:
+            case "utf-8": return self.decodeInUTF8()
+            case _: raise TypeError(f"Got unexpected encoding here \"{self.encoding}\"")
+
+    def decodeInUTF8(self) -> StringMakerFromBytes:
         while len(self.bytes_buffer) > 0:
             first_byte = self.bytes_buffer[0]
 
