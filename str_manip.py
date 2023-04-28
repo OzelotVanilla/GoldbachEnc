@@ -45,8 +45,13 @@ class BitExtracter:
         if n_bit_to_extract > 0:
             guess_num_of_char_extract = math.ceil(n_bit_to_extract / 8)
             extracted_byte = self.__getNCharFromOrigin(guess_num_of_char_extract).encode()
+
+            # If the extracter is already exhausted here, it will get empty string
+            if len(extracted_byte) == 0:
+                return []
+
             # Concat lists of bits
-            bits_array = reduce(add, [BitExtracter.objToBits(c) for c in extracted_byte])
+            bits_array = reduce(add, [BitExtracter.objToBits(c, in_byte_width=True) for c in extracted_byte])
             bits_array_len = len(bits_array)
 
             # Checkpoint: `bits_array` must be longer than `n_bit`
@@ -73,7 +78,11 @@ class BitExtracter:
 
         return result
 
-    def objToBits(of: bytes | int) -> list[int]:
+    def objToBits(of: bytes | int, *, in_byte_width: bool = False) -> list[int]:
+        """
+        `in_byte_width` will make the output bits length equals to times of 8.
+        Like 71 will be [0, 1, 0, 0, 0, 1, 1, 1] if this option is turned on.
+        """
         match of:
             case bytes():
                 result = [0] * len(of) * 8
@@ -86,9 +95,17 @@ class BitExtracter:
                 return result
 
             case int():
-                bit_length = of.bit_length()
-                start_at = math.ceil(bit_length / 8) * 8 - 1
-                return [(of >> weight) & 1 for weight in range(start_at, -1, -1)]
+                # Like 71 is [1, 0, 0, 0, 1, 1, 1], 7 bit length,
+                #  the first bit need to bring down only 6 times to reach 1's place.
+                start_at = of.bit_length() - 1
+                result = [(of >> weight) & 1 for weight in range(start_at, -1, -1)]
+
+                if in_byte_width:
+                    len_result = len(result)
+                    num_of_zero_to_append = 8 - len_result % 8
+                    result = [0] * num_of_zero_to_append + result
+
+                return result
 
             case _:
                 raise TypeError(f"Unsupported type {type(of)} for `bytesToBits`.")
@@ -126,6 +143,8 @@ class BitExtracter:
         possible_max_position_exclude = min(self.__position_by_codepoint + n_char, len(self.__origin))
         result = self.__origin[self.__position_by_codepoint:possible_max_position_exclude]
         self.__position_by_codepoint = possible_max_position_exclude
+        if len(result) == 0:
+            self.__origin_str_exhausted = True
         return result
 
 
@@ -134,9 +153,9 @@ class StringBuffer(StringIO):
 
 
 class StringBuffer(StringIO):
-    def __init__(self, initial_value: str | None = ..., *,
+    def __init__(self, initial_value: str | None = None, *,
                  allocate_n_byte: int = None,
-                 newline: str | None = ...) -> None:
+                 newline: str | None = "\n") -> None:
         super().__init__(initial_value, newline)
 
         if allocate_n_byte is not None:

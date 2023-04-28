@@ -60,15 +60,22 @@ class User:
     def savePublicKey(self, name: str, key: PublicKey):
         self.key_of_others[name] = key
 
-    def sendEncMsgTo(self, name: str, message: str) -> tuple[list[int], int]:
+    def sendEncMsgTo(self, name: str, message: str, mode: EncDecMode = EncDecMode.byte_wise) -> tuple[list[int], int]:
         if name not in self.key_of_others:
             raise KeyError(f"The user \"{self.name}\" does not have user \"{name}\" public key.")
 
         keys = self.key_of_others[name]
-        return encryptGoldbachSimple(message, keys.a_inv, keys.b_inv, keys.k)
+        match mode:
+            case EncDecMode.byte_wise:
+                return GoldbachEncMessage(encryptGoldbach(message, keys), keys.k)
+            case EncDecMode.char_wise:
+                return GoldbachEncMessage(encryptGoldbachSimple(message, keys.a_inv, keys.b_inv, keys.k))
 
-    def decryptEncMsg(self, enc_message: tuple[list[int], int]) -> str:
-        message, k = enc_message
+    def decryptEncMsg(self, enc_message: GoldbachEncMessage, mode: EncDecMode = EncDecMode.byte_wise) -> str:
+        message, k = enc_message.message, enc_message.k
         keys = self.key_holder[k].private_key
-
-        return decryptGoldbachSimple(message, keys.a, keys.b, keys.n)
+        match mode:
+            case EncDecMode.byte_wise:
+                return decryptGoldbach(message, keys)
+            case EncDecMode.char_wise:
+                return decryptGoldbachSimple(message, keys.a, keys.b, keys.n)

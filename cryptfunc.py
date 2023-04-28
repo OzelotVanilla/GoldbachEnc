@@ -2,7 +2,8 @@ from str_manip import BitExtracter, StringBuffer, StringMakerFromBytes
 from mathfunc import genKeys, getSafeRandomInt
 
 from collections import deque
-from random import Random
+from collections.abc import MutableSequence
+from enum import Enum
 
 
 class PublicKey:
@@ -27,6 +28,22 @@ class GoldbachKey:
         self.private_key = private_key
 
 
+class GoldbachEncMessage:
+    def __init__(self, message: MutableSequence[int], k: int) -> None:
+        self.message = message
+        self.k = k
+
+    def __str__(self) -> str:
+        return ""                                                                                 \
+            + f"Encrypted message using GoldbachEnc with k = {self.k}.\n"                         \
+            + f"\tMessage preview: {', '.join([str(self.message[i]) for i in range(5)])}.\n"
+
+
+class EncDecMode(Enum):
+    char_wise = 1
+    byte_wise = 2
+
+
 def generateKeyGoldbach():
     a, b, n, a_inv, b_inv, k = genKeys()
 
@@ -47,7 +64,7 @@ def encryptGoldbachSimple(message: str, a_inv: int, b_inv: int, k: int) -> tuple
     for i in range(len_message):
         result[i] = ord(message[i]) * (a_inv if i % 2 == 0 else b_inv) % k
 
-    return (result, k)
+    return GoldbachEncMessage(result, k)
 
 
 def decryptGoldbachSimple(message: list[int], a: int, b: int, n: int) -> str:
@@ -62,25 +79,32 @@ def decryptGoldbachSimple(message: list[int], a: int, b: int, n: int) -> str:
 
 def encryptGoldbach(message: str, public_key: PublicKey, *, encoding: str = "utf-8") -> deque[int]:
     # Use block cipher method to encode, block size is `less_than_n_bit`.
-    extracter = BitExtracter(message)
-    encrypt_result = deque(maxlen=extracter.getApproxSizeInBit() / less_than_n_bit + 10)
     i = 0
     a_inv = public_key.a_inv
     b_inv = public_key.b_inv
     k = public_key.k
     less_than_n_bit = public_key.less_than_n_bit
 
+    extracter = BitExtracter(message)
+    encrypt_result = deque(maxlen=int(extracter.getApproxSizeInBit() / less_than_n_bit) + 10)
+
     # While the string is not exhausted, can extract normally
     while extracter.isNotExhausted():
         bits_extracted = extracter.getNBit(less_than_n_bit)
-        number_from_bits = BitExtracter.bitsToNumber(bits_extracted)
+
+        # If get a em
+        if len(bits_extracted) == 0:
+            break
+
+        # Add leading one to the bit, to avoid the loss of leading zero when decrypting
+        number_from_bits = BitExtracter.bitsToNumber([1] + bits_extracted)
         number_multiplied = number_from_bits * (a_inv if i % 2 == 0 else b_inv)
 
         # Checkpoint: If failed, it implies the a_inv or b_inv is still too small
         if number_multiplied < k:
             raise ArithmeticError(
                 f"{'a_inv' if i % 2 == 0 else 'b_inv'} is too small ({(a_inv if i % 2 == 0 else b_inv)})! "
-                + f"Should be greater than k ({k})."
+                + f"Should be greater than k ({k}), multiply result is {number_multiplied}"
             )
 
         encrypt_result.append(number_multiplied % k)
@@ -116,7 +140,13 @@ def decryptGoldbach(message: deque[int], private_key: PrivateKey) -> str:
         # Decrypt the message
         x = x % n * (a if i % 2 == 0 else b) % n
 
+        # Since the original bit for encrypt may contains leading zero,
+        #  so this should add leading zero according to `less_than_n_bit`.
+        # If it is the last number of the array,
         x_bits = BitExtracter.objToBits(x)
+
+        # Delete the leading one, which is added in encryption phase
+        x_bits = x_bits[1:]
         for bit in x_bits:
             bits_buffer.append(bit)
 

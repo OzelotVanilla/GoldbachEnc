@@ -25,7 +25,7 @@ def genPrime(*, n_bit: int = 64, exclude: list[int] = None, coprime_with: list[i
         elif exclude is not None:
             while p in exclude:
                 p = getprime()
-        else:  # coprime_with option is on
+        else:  # only coprime_with option is on
             while reduce(or_, [isNotCoprime(p, x) for x in coprime_with]):
                 p = getprime(n_bit)
 
@@ -43,7 +43,7 @@ def getModInverse(of: int, under_mod: int, *,
         # Bigger Than Mode
         if bigger_than is not None:
             while result <= bigger_than:
-                result += getSafeRandomInt(under_mod, under_mod**4) * under_mod
+                result += getSafeRandomInt(1, under_mod**4) * under_mod
         else:
             result += getSafeRandomInt(int(enlarge_range_left), int(enlarge_range_right)) * under_mod
 
@@ -67,7 +67,7 @@ def genKeys(*, a_bit: int = 16, b_bit: int = 16) -> tuple[int, int, int, int, in
         break
 
     # Get enlarge factor `k`, this makes k harder to decode to `n`
-    k = n * reduce(mul, [genPrime(n_bit=16, coprime_with=[n]) for _ in range(4)])
+    k = n * reduce(mul, [genPrime(n_bit=getSafeRandomInt(4, n.bit_length()), coprime_with=[n]) for _ in range(4)])
 
     # Find the a^-1 and b^-1 according to n
     a_inv = getModInverse(a, n, get_random=True, bigger_than=k)
