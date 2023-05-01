@@ -14,12 +14,19 @@ class PublicKey:
         # This is used for stronger encrypt, tell the sender make chunk less than this bit.
         self.less_than_n_bit = less_than_n_bit
 
+    def __str__(self) -> str:
+        return f"Public@{{a_inv: {self.a_inv}, b_inv: {self.b_inv}, "\
+            + f"k: {self.k}, less_than_n_bit: {self.less_than_n_bit}}}"
+
 
 class PrivateKey:
     def __init__(self, a: int, b: int) -> None:
         self.a = a
         self.b = b
         self.n = a + b
+
+    def __str__(self) -> str:
+        return f"PrivateKey@{{a: {self.a}, b: {self.b}, n: {self.n}}}"
 
 
 class GoldbachKey:

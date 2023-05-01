@@ -60,7 +60,7 @@ class User:
     def savePublicKey(self, name: str, key: PublicKey):
         self.key_of_others[name] = key
 
-    def sendEncMsgTo(self, name: str, message: str, mode: EncDecMode = EncDecMode.byte_wise) -> tuple[list[int], int]:
+    def sendEncMsgTo(self, name: str, message: str, mode: EncDecMode = EncDecMode.byte_wise) -> GoldbachEncMessage:
         if name not in self.key_of_others:
             raise KeyError(f"The user \"{self.name}\" does not have user \"{name}\" public key.")
 
