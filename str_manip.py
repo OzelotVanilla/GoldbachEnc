@@ -7,6 +7,8 @@ from sys import getsizeof
 import math
 import os
 
+__all__ = ["BitExtracter", "StringBuffer", "StringMakerFromBytes"]
+
 
 class BitExtracter:
     def __init__(self, of: object) -> None:
@@ -49,7 +51,7 @@ class BitExtracter:
             # If the extracter is already exhausted here, it will get empty string
             if len(extracted_byte) == 0:
                 self.__origin_str_exhausted = True
-                return []
+                return result[0:result_write_position]
 
             # Concat lists of bits
             bits_array = reduce(add, [BitExtracter.objToBits(c, in_byte_width=True) for c in extracted_byte])
@@ -274,6 +276,8 @@ class StringMakerFromBytes:
                         byte_to_pop = 6
                     else:
                         break
+                else:
+                    raise ValueError(f"Unsupported byte {first_byte}")
 
                 s = bytes([self.bytes_buffer.popleft() for _ in range(byte_to_pop)]).decode(self.encoding)
 

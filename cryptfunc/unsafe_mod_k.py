@@ -1,9 +1,12 @@
-from str_manip import BitExtracter, StringBuffer, StringMakerFromBytes
-from mathfunc import genKeys, getSafeRandomInt
+from .typelib import *
 
+from mathfunc import *
+from str_manip import *
+
+from sympy.ntheory import totient
+from functools import reduce
+from operator import mul
 from collections import deque
-from collections.abc import MutableSequence
-from enum import Enum
 
 
 class PublicKey:
@@ -22,26 +25,33 @@ class PrivateKey:
         self.n = a + b
 
 
-class GoldbachKey:
-    def __init__(self, public_key: PublicKey, private_key: PrivateKey) -> None:
-        self.public_key = public_key
-        self.private_key = private_key
+def genKeys(*, a_bit: int = 16, b_bit: int = 16) -> tuple[int, int, int, int, int, int, int]:
+    """
+    n = a + b.
+    """
+    a, b, n = 0, 0, 0
+    a_inv, b_inv = 0, 0
+    while True:
+        # Generate a, b, n
+        a, b = genPrime(n_bit=a_bit), genPrime(n_bit=b_bit)
+        n = a + b  # Goldbach here!
+        n_a_b_not_coprime = not (isCoprime(a, n) and isCoprime(b, n))
+        if n_a_b_not_coprime:
+            continue
 
+        break
 
-class GoldbachEncMessage:
-    def __init__(self, message: MutableSequence[int], k: int) -> None:
-        self.message = message
-        self.k = k
+    # Get enlarge factor `k`, this makes k harder to decode to `n`
+    n_factors = [genPrime(n_bit=getSafeRandomInt(4, n.bit_length()), coprime_with=[n]) for _ in range(4)]
+    n_factors_mul = reduce(mul, n_factors)
+    k = n * n_factors_mul
 
-    def __str__(self) -> str:
-        return ""                                                                                 \
-            + f"Encrypted message using GoldbachEnc with k = {self.k}.\n"                         \
-            + f"\tMessage preview: {', '.join([str(self.message[i]) for i in range(5)])}.\n"
-
-
-class EncDecMode(Enum):
-    char_wise = 1
-    byte_wise = 2
+    # Find the a^-1 and b^-1 according to n
+    a_inv = getModInverse(a, n, get_random=True, bigger_than=k)
+    b_inv = getModInverse(b, n, get_random=True, bigger_than=k)
+    # Make them big enough, so they can perform "mod k",
+    #  and let the encrypted message not able to be calc (if m * a_inv < k, it is obvious to steal)
+    return a, b, n, a_inv, b_inv, k
 
 
 def generateKeyGoldbach() -> GoldbachKey:
@@ -52,7 +62,7 @@ def generateKeyGoldbach() -> GoldbachKey:
     # More than 10 bit will be safe ?
     # Also make sure that this length message, times `a_inv` or `b_inv`, will bigger than `k`
     # Maybe it can be reached by having a big `a_inv` and `b_inv` which is bigger than `k` ?
-    less_than_n_bit = getSafeRandomInt(10, n_bit_length - 1)
+    less_than_n_bit = getSafeRandomInt(10, n_bit_length - 2)
 
     return GoldbachKey(PublicKey(a_inv, b_inv, k, less_than_n_bit), PrivateKey(a, b))
 

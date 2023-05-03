@@ -1,7 +1,10 @@
-from rsa.prime import getprime, are_relatively_prime, is_prime
+from rsa.prime import getprime, are_relatively_prime, is_prime, gcd
+from sympy.ntheory import totient
 from functools import reduce
 from operator import mul, or_
 from secrets import randbelow
+
+__all__ = ["gcd", "isPrime", "isCoprime", "isNotCoprime", "genPrime", "getModInverse", "getSafeRandomInt"]
 
 
 def isPrime(n: int) -> bool: return is_prime(n)
@@ -67,7 +70,12 @@ def genKeys(*, a_bit: int = 16, b_bit: int = 16) -> tuple[int, int, int, int, in
         break
 
     # Get enlarge factor `k`, this makes k harder to decode to `n`
-    k = n * reduce(mul, [genPrime(n_bit=getSafeRandomInt(4, n.bit_length()), coprime_with=[n]) for _ in range(4)])
+    n_factors = [genPrime(n_bit=getSafeRandomInt(4, n.bit_length()), coprime_with=[n]) for _ in range(4)]
+    n_factors_mul = reduce(mul, n_factors)
+    k = n * n_factors_mul
+
+    # Find phi(k), as `k = n * p_1 * p_2 * ... * p_n`
+    phi_k = n_factors_mul * totient(n)
 
     # Find the a^-1 and b^-1 according to n
     a_inv = getModInverse(a, n, get_random=True, bigger_than=k)
