@@ -50,6 +50,9 @@ def genKeys(*, a_bit: int = 16, b_bit: int = 16, n_factors_num: int = 4) -> tupl
         # Generate a, b, n
         a, b = genPrime(n_bit=a_bit), genPrime(n_bit=b_bit)
         n = a + b  # Goldbach here!
+        if isNotPrime(n, exclude_factor=[2, 3, 7]):
+            continue
+
         d = a * b
         if isNotCoprime(d, n):
             continue
@@ -61,8 +64,6 @@ def genKeys(*, a_bit: int = 16, b_bit: int = 16, n_factors_num: int = 4) -> tupl
         prime_factors = n_factors  # + two_prime
         n_factors_mul = reduce(mul, prime_factors)
         k = n * n_factors_mul
-        if d > k:
-            continue
 
         # The common factor of `p_i` must be very small. If possible, we say it less than 10.
         len_prime_factor = len(prime_factors)
@@ -83,6 +84,9 @@ def genKeys(*, a_bit: int = 16, b_bit: int = 16, n_factors_num: int = 4) -> tupl
 
         # Find phi(k) (euler totient function), as `k = n * p_1 * p_2 * ... * p_n`
         phi_k = int(euler(n)) * reduce(mul, [i - 1 for i in prime_factors])
+
+        if d >= phi_k or d <= 0:
+            continue
 
         if isNotCoprime(d, phi_k):
             continue

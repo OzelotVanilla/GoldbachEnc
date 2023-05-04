@@ -4,10 +4,21 @@ from functools import reduce
 from operator import mul, or_
 from secrets import randbelow
 
-__all__ = ["gcd", "isPrime", "isCoprime", "isNotCoprime", "genPrime", "getModInverse", "getSafeRandomInt"]
+__all__ = ["gcd", "isPrime", "isNotPrime", "isCoprime", "isNotCoprime", "genPrime", "getModInverse", "getSafeRandomInt"]
 
 
-def isPrime(n: int) -> bool: return is_prime(n)
+def isPrime(n: int, *, exclude_factor: list[int] = None) -> bool:
+    if exclude_factor is not None:
+        for divisor in exclude_factor:
+            if n % divisor != 0:  # n does not have this factor
+                continue
+            else:
+                n /= divisor
+
+    return is_prime(int(n))
+
+
+def isNotPrime(n: int, exclude_factor: list[int] = None) -> bool: return not isPrime(n, exclude_factor=exclude_factor)
 
 
 def isCoprime(a: int, b: int) -> bool: return are_relatively_prime(a, b)
